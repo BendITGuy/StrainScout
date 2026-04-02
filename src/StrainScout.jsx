@@ -1,75 +1,57 @@
-import { useState, useEffect, useRef } from "react";
-import { Search, MapPin, Leaf, Bell, X, ExternalLink, ChevronRight, Loader2, CheckCircle2, AlertCircle, Tag, Zap } from "lucide-react";
+import { useState, useRef } from "react";
+import {
+  Search, MapPin, Leaf, Bell, X, ExternalLink, ChevronRight,
+  Loader2, CheckCircle2, AlertCircle, Tag, Zap, FlaskConical
+} from "lucide-react";
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const MOCK_DISPENSARIES = [
-  { id: 1, name: "Oregrown", slug: "oregrown-bend", city: "Bend", state: "OR" },
-  { id: 2, name: "Puffin' Cannabis Co.", slug: "puffin-cannabis-bend", city: "Bend", state: "OR" },
-  { id: 3, name: "Green Theory", slug: "green-theory-bend", city: "Bend", state: "OR" },
-  { id: 4, name: "The Haunt", slug: "the-haunt-bend", city: "Bend", state: "OR" },
-  { id: 5, name: "Budhaus", slug: "budhaus-bend", city: "Bend", state: "OR" },
+// âââ Real Bend, OR dispensaries verified on Dutchie ââââââââââââââââââââââââââ
+// Slugs sourced from dutchie.com/us/dispensaries/or-bend (April 2026)
+const BEND_DISPENSARIES = [
+  { id: 1, name: "Oregrown",                 slug: "oregrown",                         city: "Bend",   state: "OR" },
+  { id: 2, name: "The Herb Center",          slug: "the-herb-center",                  city: "Bend",   state: "OR" },
+  { id: 3, name: "Cannabend",                slug: "cannabend",                        city: "Bend",   state: "OR" },
+  { id: 4, name: "Substance (Empire Ave)",   slug: "substance-empire",                 city: "Bend",   state: "OR" },
+  { id: 5, name: "The Flower Room â Tumalo", slug: "The%20Flower%20Room%20-%20Tumalo", city: "Tumalo", state: "OR" },
 ];
 
-const MOCK_RESULTS = {
-  1: [
-    { id: "a1", strain: null, type: "Flower", price: "$38 / 3.5g", thc: "24.1%", cbd: "0.1%", brand: "Oregrown House" },
-    { id: "a2", strain: null, type: "Pre-roll", price: "$12 / 1g", thc: "22.8%", cbd: "0.0%", brand: "Oregrown House" },
+// âââ Demo simulation data âââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Simulates what real results look like once connected to the Dutchie API.
+// In production the frontend calls /api/search?slug=X&strain=Y and that
+// Vercel serverless function queries Dutchie's GraphQL endpoint server-side
+// (bypassing browser CORS). None of this is real inventory data.
+const DEMO_RESULTS = {
+  1: [ // Oregrown
+    { id: "o1", type: "Flower",   price: "$38 / 3.5g", thc: "24.1%", cbd: "0.1%", brand: "Oregrown House" },
+    { id: "o2", type: "Pre-roll", price: "$12 / 1g",   thc: "22.8%", cbd: "0.0%", brand: "Oregrown House" },
   ],
-  3: [
-    { id: "c1", strain: null, type: "Flower", price: "$32 / 3.5g", thc: "23.5%", cbd: "0.2%", brand: "Green Theory" },
-  ],
-  5: [
-    { id: "e1", strain: null, type: "Concentrate", price: "$45 / 1g", thc: "78.4%", cbd: "0.4%", brand: "Budhaus Extracts" },
-    { id: "e2", strain: null, type: "Flower", price: "$28 / 3.5g", thc: "21.0%", cbd: "0.1%", brand: "Local Farms Co." },
+  3: [ // Cannabend
+    { id: "c1", type: "Flower",      price: "$32 / 3.5g", thc: "23.5%", cbd: "0.2%", brand: "Cannabend Selections" },
+    { id: "c2", type: "Concentrate", price: "$40 / 1g",   thc: "76.2%", cbd: "0.3%", brand: "Cannabend Extracts" },
   ],
 };
 
 const TYPE_COLORS = {
-  Flower: "bg-green-100 text-green-800",
-  "Pre-roll": "bg-yellow-100 text-yellow-800",
+  Flower:      "bg-green-100 text-green-800",
+  "Pre-roll":  "bg-yellow-100 text-yellow-800",
   Concentrate: "bg-purple-100 text-purple-800",
-  Edible: "bg-orange-100 text-orange-800",
-  Vape: "bg-blue-100 text-blue-800",
+  Edible:      "bg-orange-100 text-orange-800",
+  Vape:        "bg-blue-100 text-blue-800",
 };
 
 const DEALS = [
-  {
-    id: 1,
-    store: "Oregrown",
-    title: "20% Off All Flower",
-    description: "Every Tuesday — use code TUESDAYBLAZE at checkout.",
-    badge: "Weekly Deal",
-    color: "from-green-500 to-emerald-600",
-  },
-  {
-    id: 2,
-    store: "Budhaus",
-    title: "Buy 2 Pre-rolls, Get 1 Free",
-    description: "Mix and match any pre-rolls in-store.",
-    badge: "BOGO",
-    color: "from-purple-500 to-violet-600",
-  },
-  {
-    id: 3,
-    store: "Green Theory",
-    title: "$5 Grams — First-Time Patients",
-    description: "New members get a gram of any flower for $5.",
-    badge: "New Patient",
-    color: "from-amber-500 to-orange-600",
-  },
+  { id: 1, store: "Oregrown",    title: "20% Off All Flower",          description: "Every Tuesday â use code TUESDAYBLAZE at checkout.", badge: "Weekly Deal", color: "from-green-500 to-emerald-600" },
+  { id: 2, store: "Cannabend",   title: "Buy 2 Pre-rolls, Get 1 Free", description: "Mix and match any pre-rolls in-store.",              badge: "BOGO",        color: "from-purple-500 to-violet-600" },
+  { id: 3, store: "Herb Center", title: "$5 Grams â First-Time Patients", description: "New members get a gram of any flower for $5.",   badge: "New Patient", color: "from-amber-500 to-orange-600" },
 ];
 
-// ─── Utility ──────────────────────────────────────────────────────────────────
+// âââ Utilities ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
-function buildDutchieUrl(cityState) {
+function buildDutchieListUrl(cityState) {
   const parts = cityState.trim().toLowerCase().replace(/,\s*/g, " ").split(" ");
-  const city = parts[0];
-  const state = parts[1] || "";
-  return `https://dutchie.com/us/dispensaries/${state}-${city}`;
+  return `https://dutchie.com/us/dispensaries/${parts[1] || ""}-${parts[0]}`;
 }
 
-function slugUrl(slug) {
+function dispensaryUrl(slug) {
   return `https://dutchie.com/dispensary/${slug}`;
 }
 
@@ -77,14 +59,39 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// ─── Components ───────────────────────────────────────────────────────────────
+// âââ Components âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
-function Badge({ type }) {
+function TypeBadge({ type }) {
   const cls = TYPE_COLORS[type] || "bg-gray-100 text-gray-700";
   return (
     <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full ${cls}`}>
       {type}
     </span>
+  );
+}
+
+function DemoBanner() {
+  const [visible, setVisible] = useState(true);
+  if (!visible) return null;
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex items-start gap-3">
+      <FlaskConical className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+      <div className="flex-1 text-sm text-amber-800">
+        <strong>Prototype demo â simulated search results.</strong> Dispensary names and menu links are real.
+        Live inventory requires Dutchie API access â that's the pitch.{" "}
+        <a
+          href="https://business.dutchie.com/integrations"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline font-medium"
+        >
+          Dutchie API info â
+        </a>
+      </div>
+      <button onClick={() => setVisible(false)} className="text-amber-500 hover:text-amber-700 flex-shrink-0">
+        <X className="w-4 h-4" />
+      </button>
+    </div>
   );
 }
 
@@ -96,9 +103,8 @@ function ResultCard({ item, storeName, storeSlug, strainName, onSetAlert }) {
           <p className="font-semibold text-gray-900 text-sm leading-tight">{strainName}</p>
           <p className="text-xs text-gray-500 mt-0.5">{item.brand}</p>
         </div>
-        <Badge type={item.type} />
+        <TypeBadge type={item.type} />
       </div>
-
       <div className="flex items-center gap-4 text-sm">
         <div className="flex flex-col">
           <span className="text-xs text-gray-400 uppercase tracking-wide">Price</span>
@@ -113,7 +119,6 @@ function ResultCard({ item, storeName, storeSlug, strainName, onSetAlert }) {
           <span className="font-semibold text-blue-700">{item.cbd}</span>
         </div>
       </div>
-
       <div className="flex items-center gap-2 pt-1 border-t border-gray-50">
         <MapPin className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
         <span className="text-xs text-gray-500 flex-1 truncate">{storeName}</span>
@@ -126,7 +131,7 @@ function ResultCard({ item, storeName, storeSlug, strainName, onSetAlert }) {
             Alert
           </button>
           <a
-            href={slugUrl(storeSlug)}
+            href={dispensaryUrl(storeSlug)}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 text-xs font-medium text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded-lg transition-colors"
@@ -144,9 +149,7 @@ function DealCard({ deal }) {
   return (
     <div className={`relative rounded-2xl overflow-hidden bg-gradient-to-br ${deal.color} text-white p-5 flex flex-col gap-2`}>
       <div className="flex items-start justify-between">
-        <span className="text-xs font-semibold bg-white bg-opacity-20 px-2 py-0.5 rounded-full">
-          {deal.badge}
-        </span>
+        <span className="text-xs font-semibold bg-white bg-opacity-20 px-2 py-0.5 rounded-full">{deal.badge}</span>
         <span className="text-xs opacity-70">{deal.store}</span>
       </div>
       <p className="font-bold text-lg leading-tight">{deal.title}</p>
@@ -160,12 +163,10 @@ function DealCard({ deal }) {
 
 function AlertModal({ strainName, onClose }) {
   const [confirmed, setConfirmed] = useState(false);
-
   function handleConfirm() {
     setConfirmed(true);
     setTimeout(onClose, 1800);
   }
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4">
@@ -184,18 +185,14 @@ function AlertModal({ strainName, onClose }) {
                 <Bell className="w-5 h-5 text-indigo-600" />
                 <h3 className="font-bold text-gray-900">Set Strain Alert</h3>
               </div>
-              <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-                <X className="w-5 h-5" />
-              </button>
+              <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
             <p className="text-sm text-gray-600">
               We'll notify you <span className="font-semibold">daily</span> when{" "}
-              <span className="font-semibold text-indigo-700">{strainName}</span> is available at a
-              dispensary near you.
+              <span className="font-semibold text-indigo-700">{strainName}</span> is available at a dispensary near you.
             </p>
             <div className="bg-indigo-50 rounded-xl p-3 text-xs text-indigo-700">
-              <strong>Coming soon:</strong> Email and push notifications. Leave your email to be
-              notified when alerts launch.
+              <strong>Coming soon:</strong> Email and push notifications. Leave your email to join the early access list.
             </div>
             <input
               type="email"
@@ -203,18 +200,8 @@ function AlertModal({ strainName, onClose }) {
               className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
             />
             <div className="flex gap-2">
-              <button
-                onClick={onClose}
-                className="flex-1 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirm}
-                className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors"
-              >
-                Set Alert
-              </button>
+              <button onClick={onClose} className="flex-1 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
+              <button onClick={handleConfirm} className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors">Set Alert</button>
             </div>
           </>
         )}
@@ -223,7 +210,7 @@ function AlertModal({ strainName, onClose }) {
   );
 }
 
-function SearchInfoModal({ onClose, onProceed, location, strain }) {
+function HowItWorksModal({ onClose, onProceed, location, strain }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 flex flex-col gap-4">
@@ -232,40 +219,31 @@ function SearchInfoModal({ onClose, onProceed, location, strain }) {
             <Zap className="w-5 h-5 text-amber-500" />
             <h3 className="font-bold text-gray-900">How Search Works</h3>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-5 h-5" />
-          </button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
         </div>
         <p className="text-sm text-gray-600">
-          To find <span className="font-semibold text-green-700">{strain || "your strain"}</span> near{" "}
-          <span className="font-semibold">{location || "your area"}</span>, StrainScout will check each
-          dispensary's live menu one by one.
+          StrainScout will check each dispensary's Dutchie menu for{" "}
+          <span className="font-semibold text-green-700">{strain || "your strain"}</span> near{" "}
+          <span className="font-semibold">{location}</span>.
         </p>
         <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-xs text-amber-800 leading-relaxed">
-          <strong>Powered by Claude + Dutchie API</strong> — In production, Claude queries each
-          store's Dutchie menu and surfaces matching strains in real time. Results update daily.
+          <strong>Demo mode active.</strong> This prototype uses real Bend, OR dispensary names and
+          correct Dutchie menu links. Live results require Dutchie API credentials â see pitch deck.
         </div>
         <ul className="text-sm text-gray-600 flex flex-col gap-2">
-          <li className="flex gap-2 items-start">
-            <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-            Checks menus at every local dispensary automatically
-          </li>
-          <li className="flex gap-2 items-start">
-            <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-            Compares price, THC%, and product type side by side
-          </li>
-          <li className="flex gap-2 items-start">
-            <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-            Set alerts to be notified when your strain comes back in stock
-          </li>
+          {[
+            "Checks menus at every local Dutchie-powered dispensary",
+            "Compares price, THC%, and product type side by side",
+            "Set alerts to be notified when your strain is back in stock",
+          ].map((t) => (
+            <li key={t} className="flex gap-2 items-start">
+              <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+              {t}
+            </li>
+          ))}
         </ul>
         <div className="flex gap-2 pt-1">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-          >
-            Cancel
-          </button>
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
           <button
             onClick={onProceed}
             className="flex-1 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-1.5"
@@ -279,29 +257,29 @@ function SearchInfoModal({ onClose, onProceed, location, strain }) {
   );
 }
 
-// ─── Main App ─────────────────────────────────────────────────────────────────
+// âââ Main App âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 export default function StrainScout() {
-  const [location, setLocation] = useState("Bend, OR");
-  const [strain, setStrain] = useState("");
-  const [showInfoModal, setShowInfoModal] = useState(false);
-  const [searching, setSearching] = useState(false);
+  const [location, setLocation]               = useState("Bend, OR");
+  const [strain, setStrain]                   = useState("");
+  const [showHowItWorks, setShowHowItWorks]   = useState(false);
+  const [searching, setSearching]             = useState(false);
   const [currentStoreIdx, setCurrentStoreIdx] = useState(-1);
-  const [checkedStores, setCheckedStores] = useState([]);
-  const [results, setResults] = useState([]);
-  const [searchComplete, setSearchComplete] = useState(false);
-  const [alertStrain, setAlertStrain] = useState(null);
-  const [searchedStrain, setSearchedStrain] = useState("");
+  const [checkedStores, setCheckedStores]     = useState([]);
+  const [results, setResults]                 = useState([]);
+  const [searchComplete, setSearchComplete]   = useState(false);
+  const [alertStrain, setAlertStrain]         = useState(null);
+  const [searchedStrain, setSearchedStrain]   = useState("");
   const abortRef = useRef(false);
 
   function handleSearchClick() {
     if (!strain.trim()) return;
-    setShowInfoModal(true);
+    setShowHowItWorks(true);
   }
 
   async function runSearch() {
     abortRef.current = false;
-    setShowInfoModal(false);
+    setShowHowItWorks(false);
     setSearching(true);
     setSearchComplete(false);
     setResults([]);
@@ -311,23 +289,20 @@ export default function StrainScout() {
 
     const allResults = [];
 
-    for (let i = 0; i < MOCK_DISPENSARIES.length; i++) {
+    for (let i = 0; i < BEND_DISPENSARIES.length; i++) {
       if (abortRef.current) break;
-      const store = MOCK_DISPENSARIES[i];
+      const store = BEND_DISPENSARIES[i];
       setCurrentStoreIdx(i);
-      await sleep(900 + Math.random() * 600);
+      await sleep(850 + Math.random() * 550);
 
-      const storeResults = (MOCK_RESULTS[store.id] || []).map((r) => ({
+      const storeResults = (DEMO_RESULTS[store.id] || []).map((r) => ({
         ...r,
         strain: strain.trim(),
         storeName: store.name,
         storeSlug: store.slug,
       }));
 
-      setCheckedStores((prev) => [
-        ...prev,
-        { ...store, found: storeResults.length > 0 },
-      ]);
+      setCheckedStores((prev) => [...prev, { ...store, found: storeResults.length > 0 }]);
       allResults.push(...storeResults);
       setResults([...allResults]);
     }
@@ -337,15 +312,16 @@ export default function StrainScout() {
     setSearchComplete(true);
   }
 
-  const dutchieUrl = buildDutchieUrl(location);
+  const dutchieListUrl = buildDutchieListUrl(location);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 font-sans">
+
       {/* Header */}
       <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-30">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">🌿</span>
+            <span className="text-2xl">ð¿</span>
             <div>
               <span className="font-extrabold text-gray-900 text-lg tracking-tight">StrainScout</span>
               <span className="hidden sm:inline text-xs text-gray-400 ml-2">Find your strain across every dispensary near you</span>
@@ -356,26 +332,26 @@ export default function StrainScout() {
               <Tag className="w-3 h-3" />
               Sponsor
             </div>
-            <button className="text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 px-3 py-1.5 rounded-lg transition-colors">
-              Sign In
-            </button>
+            <span className="text-xs bg-amber-100 text-amber-700 font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">
+              <FlaskConical className="w-3 h-3" />
+              Demo
+            </span>
           </div>
         </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8 flex flex-col gap-8">
 
-        {/* Hero + Search Card */}
+        <DemoBanner />
+
+        {/* Search card */}
         <section className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 sm:p-8 flex flex-col gap-6">
           <div className="text-center">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 leading-tight">
               Find your strain across every dispensary near you
             </h1>
-            <p className="mt-2 text-gray-500 text-sm sm:text-base">
-              One search. Every menu. Real-time availability.
-            </p>
+            <p className="mt-2 text-gray-500 text-sm sm:text-base">One search. Every menu. Real-time availability.</p>
           </div>
-
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -387,7 +363,6 @@ export default function StrainScout() {
                 className="w-full pl-9 pr-3 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-300 bg-gray-50"
               />
             </div>
-
             <div className="relative flex-1">
               <Leaf className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
@@ -399,7 +374,6 @@ export default function StrainScout() {
                 className="w-full pl-9 pr-3 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-300 bg-gray-50"
               />
             </div>
-
             <button
               onClick={handleSearchClick}
               disabled={searching || !strain.trim()}
@@ -409,74 +383,61 @@ export default function StrainScout() {
               {searching ? "Searching..." : "Search All Stores"}
             </button>
           </div>
-
-          {location && (
-            <p className="text-xs text-center text-gray-400">
-              Searching dispensaries on{" "}
-              <a href={dutchieUrl} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline">
-                Dutchie · {location}
-              </a>{" "}
-              · Powered by Claude + Dutchie API — results update daily
-            </p>
-          )}
+          <p className="text-xs text-center text-gray-400">
+            Checking dispensaries on{" "}
+            <a href={dutchieListUrl} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline">
+              Dutchie Â· {location}
+            </a>
+            {" "}Â· Powered by Claude + Dutchie API â results update daily
+          </p>
         </section>
 
-        {/* Sponsor Banner */}
+        {/* Sponsor banner */}
         <div className="w-full border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center py-5 text-gray-400 text-sm bg-white gap-2">
           <Tag className="w-4 h-4" />
-          <span>Sponsor Banner — Your Ad Here</span>
+          <span>Sponsor Banner â Your Ad Here</span>
         </div>
 
-        {/* Progress / Store Checker */}
+        {/* Store progress */}
         {(searching || searchComplete) && (
           <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3">
             <div className="flex items-center gap-2 mb-1">
-              {searching ? (
-                <Loader2 className="w-4 h-4 text-green-600 animate-spin" />
-              ) : (
-                <CheckCircle2 className="w-4 h-4 text-green-600" />
-              )}
+              {searching
+                ? <Loader2 className="w-4 h-4 text-green-600 animate-spin" />
+                : <CheckCircle2 className="w-4 h-4 text-green-600" />}
               <h2 className="font-semibold text-gray-800 text-sm">
                 {searching
                   ? `Checking dispensaries for "${searchedStrain}"...`
                   : `Search complete for "${searchedStrain}"`}
               </h2>
             </div>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-              {MOCK_DISPENSARIES.map((store, idx) => {
+              {BEND_DISPENSARIES.map((store, idx) => {
                 const checked = checkedStores.find((s) => s.id === store.id);
                 const isActive = searching && currentStoreIdx === idx;
                 return (
                   <div
                     key={store.id}
                     className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all border ${
-                      isActive
-                        ? "border-green-300 bg-green-50"
+                      isActive ? "border-green-300 bg-green-50"
                         : checked
-                        ? checked.found
-                          ? "border-green-200 bg-green-50"
-                          : "border-gray-100 bg-gray-50"
-                        : "border-gray-100 bg-white text-gray-400"
+                          ? checked.found ? "border-green-200 bg-green-50" : "border-gray-100 bg-gray-50"
+                          : "border-gray-100 bg-white text-gray-400"
                     }`}
                   >
                     {isActive ? (
                       <Loader2 className="w-3.5 h-3.5 text-green-600 animate-spin flex-shrink-0" />
                     ) : checked ? (
-                      checked.found ? (
-                        <CheckCircle2 className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />
-                      ) : (
-                        <AlertCircle className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                      )
+                      checked.found
+                        ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />
+                        : <AlertCircle className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
                     ) : (
                       <div className="w-3.5 h-3.5 rounded-full border border-gray-200 flex-shrink-0" />
                     )}
-                    <span className={`font-medium ${checked ? "text-gray-700" : "text-gray-400"}`}>
-                      {store.name}
-                    </span>
+                    <span className={`font-medium ${checked ? "text-gray-700" : "text-gray-400"}`}>{store.name}</span>
                     {checked && (
                       <span className={`ml-auto font-semibold ${checked.found ? "text-green-700" : "text-gray-400"}`}>
-                        {checked.found ? `${(MOCK_RESULTS[store.id] || []).length} found` : "None"}
+                        {checked.found ? `${(DEMO_RESULTS[store.id] || []).length} found` : "None"}
                       </span>
                     )}
                   </div>
@@ -489,14 +450,19 @@ export default function StrainScout() {
         {/* Results */}
         {results.length > 0 && (
           <section className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <h2 className="font-bold text-gray-900 text-lg">
                 {results.length} result{results.length !== 1 ? "s" : ""} for{" "}
                 <span className="text-green-700">"{searchedStrain}"</span>
               </h2>
-              <span className="text-xs text-gray-400">
-                {checkedStores.filter((s) => s.found).length} of {checkedStores.length} stores have it
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400">
+                  {checkedStores.filter((s) => s.found).length} of {checkedStores.length} stores have it
+                </span>
+                <span className="text-xs bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <FlaskConical className="w-3 h-3" /> Demo data
+                </span>
+              </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {results.map((item) => (
@@ -516,11 +482,11 @@ export default function StrainScout() {
         {/* No results */}
         {searchComplete && results.length === 0 && (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 flex flex-col items-center gap-3 text-center">
-            <span className="text-4xl">🍃</span>
+            <span className="text-4xl">ð</span>
             <p className="font-semibold text-gray-800">No results found for "{searchedStrain}"</p>
             <p className="text-sm text-gray-500 max-w-xs">
-              None of the dispensaries near {location} currently carry this strain. Try a different
-              strain name, or set an alert to be notified when it becomes available.
+              None of the dispensaries near {location} carry this strain in our demo data.
+              Set an alert to be notified when it becomes available.
             </p>
             <button
               onClick={() => setAlertStrain(searchedStrain)}
@@ -532,34 +498,51 @@ export default function StrainScout() {
           </div>
         )}
 
-        {/* Deals of the Week */}
+        {/* Real dispensary directory */}
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-green-600" />
+            <h2 className="font-bold text-gray-900 text-base">Dispensaries in {location}</h2>
+            <span className="text-xs text-gray-400">verified on Dutchie</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {BEND_DISPENSARIES.map((store) => (
+              <a
+                key={store.id}
+                href={dispensaryUrl(store.slug)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between bg-white border border-gray-100 hover:border-green-200 hover:shadow-sm rounded-xl px-4 py-3 text-sm transition-all group"
+              >
+                <span className="font-medium text-gray-800 group-hover:text-green-700">{store.name}</span>
+                <ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-green-600" />
+              </a>
+            ))}
+          </div>
+        </section>
+
+        {/* Featured Deals */}
         <section className="flex flex-col gap-4">
           <div className="flex items-center gap-2">
             <Zap className="w-5 h-5 text-amber-500" />
             <h2 className="font-bold text-gray-900 text-lg">Featured Deals</h2>
             <span className="text-xs bg-amber-100 text-amber-700 font-semibold px-2 py-0.5 rounded-full">Sample Data</span>
           </div>
-          <p className="text-sm text-gray-500 -mt-2">
-            This section surfaces the best deals from local dispensaries. Sample deals shown below.
-          </p>
+          <p className="text-sm text-gray-500 -mt-2">Weekly deals from local dispensaries â placeholder content shown.</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {DEALS.map((deal) => (
-              <DealCard key={deal.id} deal={deal} />
-            ))}
+            {DEALS.map((deal) => <DealCard key={deal.id} deal={deal} />)}
           </div>
         </section>
 
-        {/* Sponsor Section */}
+        {/* Sponsor placement */}
         <section className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-6 flex flex-col items-center gap-2 text-center">
           <Tag className="w-5 h-5 text-gray-300" />
           <p className="font-semibold text-gray-400">Sponsor Placement</p>
           <p className="text-xs text-gray-400 max-w-sm">
-            Reserved for dispensary partners, brands, or local advertisers. This slot supports
-            StrainScout and keeps search free for everyone.
+            Reserved for dispensary partners, brands, or local advertisers.
+            This slot supports StrainScout and keeps search free for everyone.
           </p>
-          <button className="mt-1 text-xs text-indigo-500 hover:text-indigo-700 font-medium">
-            Advertise Here →
-          </button>
+          <button className="mt-1 text-xs text-indigo-500 hover:text-indigo-700 font-medium">Advertise Here â</button>
         </section>
 
       </main>
@@ -567,40 +550,32 @@ export default function StrainScout() {
       {/* Footer */}
       <footer className="mt-8 border-t border-gray-100 bg-white">
         <div className="max-w-5xl mx-auto px-4 py-5 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-400">
-          <div className="flex items-center gap-2">
-            <span className="text-base">🌿</span>
+          <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
+            <span className="text-base">ð¿</span>
             <span className="font-semibold text-gray-600">StrainScout</span>
-            <span>·</span>
-            <span>Built with Claude</span>
-            <span>·</span>
-            <span>Powered by Dutchie</span>
-            <span>·</span>
-            <span>Bend, OR</span>
+            <span>Â·</span><span>Built with Claude</span>
+            <span>Â·</span><span>Powered by Dutchie</span>
+            <span>Â·</span><span>Bend, OR</span>
           </div>
           <div className="flex gap-4">
-            <a href="#" className="hover:text-gray-600">About</a>
-            <a href="#" className="hover:text-gray-600">Advertise</a>
-            <a href="#" className="hover:text-gray-600">Privacy</a>
-            <a href="#" className="hover:text-gray-600">Terms</a>
+            {["About", "Advertise", "Privacy", "Terms"].map((l) => (
+              <a key={l} href="#" className="hover:text-gray-600">{l}</a>
+            ))}
           </div>
         </div>
       </footer>
 
       {/* Modals */}
-      {showInfoModal && (
-        <SearchInfoModal
+      {showHowItWorks && (
+        <HowItWorksModal
           location={location}
           strain={strain}
-          onClose={() => setShowInfoModal(false)}
+          onClose={() => setShowHowItWorks(false)}
           onProceed={runSearch}
         />
       )}
-
       {alertStrain && (
-        <AlertModal
-          strainName={alertStrain}
-          onClose={() => setAlertStrain(null)}
-        />
+        <AlertModal strainName={alertStrain} onClose={() => setAlertStrain(null)} />
       )}
     </div>
   );
