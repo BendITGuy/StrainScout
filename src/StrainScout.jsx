@@ -4,7 +4,7 @@ import {
   Loader2, CheckCircle2, AlertCircle, Tag, Zap, FlaskConical
 } from "lucide-react";
 
-// âââ Real Bend, OR dispensaries verified on Dutchie ââââââââââââââââââââââââââ
+// Real Bend, OR dispensaries verified on Dutchie
 // Slugs sourced from dutchie.com/us/dispensaries/or-bend (April 2026)
 const BEND_DISPENSARIES = [
   { id: 1, name: "Oregrown",                 slug: "oregrown",                         city: "Bend",   state: "OR" },
@@ -14,7 +14,7 @@ const BEND_DISPENSARIES = [
   { id: 5, name: "The Flower Room â Tumalo", slug: "The%20Flower%20Room%20-%20Tumalo", city: "Tumalo", state: "OR" },
 ];
 
-// âââ Demo simulation data âââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Demo simulation data
 // Simulates what real results look like once connected to the Dutchie API.
 // In production the frontend calls /api/search?slug=X&strain=Y and that
 // Vercel serverless function queries Dutchie's GraphQL endpoint server-side
@@ -39,13 +39,12 @@ const TYPE_COLORS = {
 };
 
 const DEALS = [
-  { id: 1, store: "Oregrown",    title: "20% Off All Flower",          description: "Every Tuesday â use code TUESDAYBLAZE at checkout.", badge: "Weekly Deal", color: "from-green-500 to-emerald-600" },
+  { id: 1, store: "Oregrown",    title: "20% Off All Flower",          description: "Every Tuesday use code TUESDAYBLAZE at checkout.", badge: "Weekly Deal", color: "from-green-500 to-emerald-600" },
   { id: 2, store: "Cannabend",   title: "Buy 2 Pre-rolls, Get 1 Free", description: "Mix and match any pre-rolls in-store.",              badge: "BOGO",        color: "from-purple-500 to-violet-600" },
-  { id: 3, store: "Herb Center", title: "$5 Grams â First-Time Patients", description: "New members get a gram of any flower for $5.",   badge: "New Patient", color: "from-amber-500 to-orange-600" },
+  { id: 3, store: "Herb Center", title: "$5 Grams First-Time Patients", description: "New members get a gram of any flower for $5.",   badge: "New Patient", color: "from-amber-500 to-orange-600" },
 ];
 
-// âââ Utilities ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
-
+// Utilities
 function buildDutchieListUrl(cityState) {
   const parts = cityState.trim().toLowerCase().replace(/,\s*/g, " ").split(" ");
   return `https://dutchie.com/us/dispensaries/${parts[1] || ""}-${parts[0]}`;
@@ -59,7 +58,7 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// âââ Components âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Components 
 
 function TypeBadge({ type }) {
   const cls = TYPE_COLORS[type] || "bg-gray-100 text-gray-700";
@@ -77,15 +76,15 @@ function DemoBanner() {
     <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex items-start gap-3">
       <FlaskConical className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
       <div className="flex-1 text-sm text-amber-800">
-        <strong>Prototype demo â simulated search results.</strong> Dispensary names and menu links are real.
-        Live inventory requires Dutchie API access â that's the pitch.{" "}
+        <strong>Prototype demo simulated search results.</strong> Dispensary names and menu links are real.
+        Live inventory requires Dutchie API access that's the pitch.{" "}
         <a
           href="https://business.dutchie.com/integrations"
           target="_blank"
           rel="noopener noreferrer"
           className="underline font-medium"
         >
-          Dutchie API info â
+          Dutchie API info -
         </a>
       </div>
       <button onClick={() => setVisible(false)} className="text-amber-500 hover:text-amber-700 flex-shrink-0">
@@ -257,7 +256,7 @@ function HowItWorksModal({ onClose, onProceed, location, strain }) {
   );
 }
 
-// âââ Main App âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// Main App
 
 export default function StrainScout() {
   const [location, setLocation]               = useState("Bend, OR");
@@ -321,7 +320,7 @@ export default function StrainScout() {
       <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-30">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">ð¿</span>
+            <span className="text-2xl">-</span>
             <div>
               <span className="font-extrabold text-gray-900 text-lg tracking-tight">StrainScout</span>
               <span className="hidden sm:inline text-xs text-gray-400 ml-2">Find your strain across every dispensary near you</span>
@@ -386,16 +385,16 @@ export default function StrainScout() {
           <p className="text-xs text-center text-gray-400">
             Checking dispensaries on{" "}
             <a href={dutchieListUrl} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline">
-              Dutchie Â· {location}
+              Dutchie {location}
             </a>
-            {" "}Â· Powered by Claude + Dutchie API â results update daily
+            {" "} Powered by Claude + Dutchie API - results update daily
           </p>
         </section>
 
         {/* Sponsor banner */}
         <div className="w-full border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center py-5 text-gray-400 text-sm bg-white gap-2">
           <Tag className="w-4 h-4" />
-          <span>Sponsor Banner â Your Ad Here</span>
+          <span>Sponsor Banner - Your Ad Here</span>
         </div>
 
         {/* Store progress */}
@@ -482,7 +481,7 @@ export default function StrainScout() {
         {/* No results */}
         {searchComplete && results.length === 0 && (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-10 flex flex-col items-center gap-3 text-center">
-            <span className="text-4xl">ð</span>
+            <span className="text-4xl">-</span>
             <p className="font-semibold text-gray-800">No results found for "{searchedStrain}"</p>
             <p className="text-sm text-gray-500 max-w-xs">
               None of the dispensaries near {location} carry this strain in our demo data.
@@ -551,7 +550,7 @@ export default function StrainScout() {
       <footer className="mt-8 border-t border-gray-100 bg-white">
         <div className="max-w-5xl mx-auto px-4 py-5 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-400">
           <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
-            <span className="text-base">ð¿</span>
+            <span className="text-base">-</span>
             <span className="font-semibold text-gray-600">StrainScout</span>
             <span>Â·</span><span>Built with Claude</span>
             <span>Â·</span><span>Powered by Dutchie</span>
